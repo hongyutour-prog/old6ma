@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>老六媽會管理系統 V13 - Google 同步版</title>
+    <title>老六媽會管理系統 V13.1 - 雲端正式版</title>
     <style>
         :root {
             --primary: #800000; --secondary: #daa520; --light: #fdfaf5;
@@ -33,11 +33,18 @@
         .role-title { background: var(--secondary); color: var(--primary); border: 1px solid var(--primary); }
         
         .btn-action { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: 10px; }
+        .payload-box { background: #1e1e1e; color: #4af626; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap; margin-top: 15px; border: 1px solid #444; }
         #loading-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:2000; justify-content:center; align-items:center; font-weight:bold; color:var(--primary); }
 
         #qr-overlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; }
         .qr-card { background:white; padding:30px; border-radius:15px; text-align:center; box-shadow: 0 0 30px var(--secondary); }
         
+        .readonly-mode .admin-only { display: none !important; }
+
+        @media print {
+            #sidebar, header, .nav-item, .admin-only, .btn-action, #qr-overlay { display: none !important; }
+            #main { padding: 0; }
+        }
         @media (max-width: 768px) { #sidebar { display: none; } #main { padding: 15px; } }
     </style>
 </head>
@@ -46,73 +53,96 @@
 <div id="loading-overlay">⏳ 正在同步雲端資料...</div>
 
 <div id="sidebar">
-    <h2>老六媽會管理 V13 (雲端版)</h2>
+    <h2>老六媽會管理系統</h2>
     <div class="nav-item active" onclick="showPage('history')"><span class="nav-icon">📜</span> 會史沿革</div>
     <div class="nav-item" onclick="showPage('dashboard')"><span class="nav-icon">📊</span> 組織進度</div>
     <div class="nav-item" onclick="showPage('members')"><span class="nav-icon">👥</span> 全會名冊</div>
+    <div class="nav-item admin-only" onclick="showPage('msg')"><span class="nav-icon">📣</span> 訊息發送</div>
     <div class="nav-item admin-only" onclick="showPage('add')"><span class="nav-icon">➕</span> 成員登記</div>
-    <div class="nav-item admin-only" onclick="showPage('config')"><span class="nav-icon">⚙️</span> 角位命名</div>
+    <div class="nav-item admin-only" onclick="showPage('config')"><span class="nav-icon">⚙️</span> 各角命名</div>
     <div class="nav-item admin-only" onclick="showQRCode()"><span class="nav-icon">📱</span> 分享登記碼</div>
     <div style="position:absolute; bottom: 20px; left: 15px; right: 15px;">
         <button id="toggle-mode" onclick="toggleMode()" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--secondary); background:none; color:var(--secondary); cursor:pointer; font-weight:bold; font-size:0.8rem;">切換觀看模式</button>
     </div>
 </div>
-
 <div id="main">
-     <div id="page-history">
+    <!-- History Page -->
+    <div id="page-history">
         <header><h1>會史沿革</h1></header>
         <div class="card">
             <h2 style="color:var(--primary); margin-bottom:15px; text-align:center;">【老六媽會沿革】</h2>
             <p>本會之創設雖缺乏完整之歷史資料考據，本文是根據歷來有關檔案資料記錄及地方耆老前輩口述，綜合記錄而形成。</p>
-            <p style="margin-top:15px;">台灣寶島由於四面環海島居祈盼，尊稱『海神』天上聖母庇佑萬民生命財產之安全，約於光緒 20 年間（西元 1894 年），由地方有志者林垂拱先生號召，創立『南瑤宮「天上聖母老六媽會」』。第一屆土地管理人為陳允恭先生。</p>
-            <p style="margin-top:15px;">據 1997 年（民國 86 年）所編南瑤宮誌本會成立於 1895 年，應是中國清朝割讓台灣給日本之年。當時地方有志人士為求本會永久延續，集資購買田地，以此作為本會經費。</p>
-            <p style="margin-top:15px;">本會初成立時僅有董事一、二十名，會員百餘名，推選林垂拱先生擔任第一任總理，林祖藩先生繼任第二任，賴癸林先生繼任第三任。後為強化組織，向台中市政府立案，變更為管理委員會，並制訂【南瑤宮天上聖母老六媽管理委員會章程】。主任委員由賴泗郎先生當選第四任。後續由江坤全先生擔任第三屆理事長。</p>
-            <p style="margin-top:15px;">目前本會組織縮減為 11 大角 42 小角，會員數約 3200 多名。本會宗旨為：健全社會宗教信仰，提倡善良風俗，並發揚固有文化，承「天上聖母」恩德浩蕩，期盼國泰民安。</p>
+            <p style="margin-top:10px;">台灣寶島由於四面環海島居祈盼，尊稱『海神』天上聖母庇佑萬民生命財產之安全，約於光緒 20 年間（西元 1894 年），由地方有志者林垂拱先生號召，創立『南瑤宮「天上聖母老六媽會」』。目前組織縮減為 11 大角 42 小角，會員數約 3200 多名。由基層選出董事，董事選出理事，理事選出理事長、副理事長、3名監事，再由監事選出常務監事。</p>
             <p style="margin-top:25px; text-align:right; font-weight:bold; color:var(--primary);">
                 社團法人台中市南瑤宮天上聖母老六媽會<br>
                 理事長：盧定國<br>
                 副理事長：李銘鑫<br>
-                總幹事：黃鏈丞　恭錄
+                總幹事：黃鏈丞 恭錄
             </p>
         </div>
     </div>
+
+    <!-- Dashboard Page -->
+    <div id="page-dashboard" style="display:none;">
+        <header><h1>佈建進度總覽</h1></header>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+            <div class="card" style="border-left: 5px solid var(--secondary);"><h3>核心領導層</h3><div id="leader-info"></div></div>
+            <div class="card" style="border-left: 5px solid var(--info);"><h3>監事會 (3員)</h3><div id="sup-info"></div></div>
+        </div>
         <div class="card">
-            <h3>11 角佈建達成率</h3>
-            <table id="dash-table"><thead><tr><th>角位</th><th>理事名額</th><th>董事進度</th><th>狀態</th></tr></thead><tbody id="kaku-list"></tbody></table>
+            <h3>11 角達成率 (理事目標: 12 名)</h3>
+            <table><thead><tr><th>角位</th><th>理事名額</th><th>董事進度</th><th>狀態</th></tr></thead><tbody id="kaku-list"></tbody></table>
         </div>
     </div>
- <div id="page-members" style="display:none;">
-        <header><h1>全會名冊</h1><div><button class="btn-action" onclick="window.print()">🖨️ 列印</button><input type="text" id="search-m" placeholder="搜尋..." oninput="render()"></div></header>
+
+    <!-- Members Page -->
+    <div id="page-members" style="display:none;">
+        <header><h1>全會成員名冊</h1><div><button class="btn-action" onclick="window.print()">🖨️ 列印</button><input type="text" id="search-m" placeholder="搜尋姓名、手機..." oninput="render()" style="width:200px; padding:8px; border-radius:6px;"></div></header>
         <div class="card"><table><thead><tr><th>姓名</th><th>身份</th><th>職務</th><th>手機</th><th>歸屬</th><th class="admin-only">管理</th></tr></thead><tbody id="member-table"></tbody></table></div>
     </div>
 
+    <!-- Message Page -->
+    <div id="page-msg" style="display:none;">
+        <header><h1>📣 訊息群發中心</h1></header>
+        <div class="card">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                <select id="msg-role"><option value="all">全體職級</option><option value="理事">全體理事</option><option value="董事">全體董事</option></select>
+                <select id="msg-kaku"></select>
+            </div>
+            <textarea id="msg-body" rows="4" style="width:100%;" placeholder="請輸入訊息內容..."></textarea>
+            <button class="btn-action" onclick="genMsg()" style="margin-top:15px;">產生群發指令</button>
+            <div id="payload-area" style="display:none;"><div class="payload-box" id="payload-content"></div><button onclick="copyMsg()">複製指令</button></div>
+        </div>
+    </div>
+
+    <!-- Add Member Page -->
     <div id="page-add" style="display:none;">
-        <header><h1>成員登記表</h1></header>
-        <div class="card" style="max-width: 500px; margin: 0 auto;">
+        <header><h1>成員登記授職</h1></header>
+        <div class="card" style="max-width: 550px; margin: 0 auto;">
             <form id="add-form">
                 <div class="form-group"><label>姓名</label><input type="text" id="in-name" required></div>
                 <div class="form-group"><label>手機</label><input type="tel" id="in-phone" required></div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div class="form-group"><label>身份</label><select id="in-base" onchange="uiAdd()"><option value="會員">會員</option><option value="組長">組長</option><option value="董事">董事</option><option value="理事">理事</option><option value="監事">監事</option></select></div>
-                    <div class="form-group"><label>職務</label><select id="in-title"><option value="">--</option><option value="理事長">理事長</option><option value="副理事長">副理事長</option><option value="常務監事">常務監事</option><option value="總幹事">總幹事</option><option value="會計">會計</option><option value="秘書">秘書</option></select></div>
+                    <div class="form-group"><label>會內身份</label><select id="in-base" onchange="uiAdd()"><option value="會員">會員</option><option value="組長">組長</option><option value="董事">董事</option><option value="理事">理事</option><option value="監事">監事</option></select></div>
+                    <div class="form-group"><label>兼任職務</label><select id="in-title"><option value="">--</option><option value="理事長">理事長</option><option value="副理事長">副理事長</option><option value="常務監事">常務監事</option><option value="總幹事">總幹事</option><option value="會計">會計</option><option value="秘書">秘書</option></select></div>
                 </div>
                 <div id="kaku-sect">
-                    <div class="form-group"><label>大角</label><select id="in-kaku" onchange="uiSK()"></select></div>
-                    <div class="form-group" id="sk-wrap"><label>小角</label><select id="in-skaku"></select></div>
+                    <div class="form-group"><label>歸屬大角</label><select id="in-kaku" onchange="uiSK()"></select></div>
+                    <div class="form-group" id="sk-wrap"><label>歸屬小角</label><select id="in-skaku"></select></div>
                 </div>
-                <button type="submit" class="btn-action" style="width:100%">☁️ 存檔至 Google</button>
+                <button type="submit" class="btn-action" style="width:100%; padding:15px;">☁️ 存檔至 Google</button>
             </form>
         </div>
     </div>
 
+    <!-- Config Page -->
     <div id="page-config" style="display:none;">
-        <header><h1>角位命名設定</h1></header>
+        <header><h1>各角與小角命名設定</h1></header>
         <div id="cfg-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:15px;"></div>
-        <button class="btn-action" onclick="saveCfg()" style="margin-top:20px; width:100%;">💾 儲存所有命名與名額設定</button>
+        <button class="btn-action" onclick="saveCfg()" style="margin-top:20px; width:100%; padding:15px;">💾 儲存並套用設定</button>
     </div>
 </div>
-
-<div id="qr-overlay" onclick="this.style.display='none'"><div class="qr-card"><h3>掃描登記</h3><div id="qrcode" style="margin:20px auto;"></div></div></div>
+<div id="qr-overlay" onclick="this.style.display='none'"><div class="qr-card" onclick="event.stopPropagation()"><h3>老六媽會登記碼</h3><div id="qrcode" style="margin:20px auto;"></div><button onclick="document.getElementById('qr-overlay').style.display='none'">關閉</button></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
@@ -145,11 +175,17 @@
     }
 
     function init() {
-        const kSelect = document.getElementById('in-kaku'); kSelect.innerHTML = '';
-        for(let i in config) kSelect.innerHTML += `<option value="${i}">${config[i].name}</option>`;
+        const kSelect = document.getElementById('in-kaku');
+        const mkSelect = document.getElementById('msg-kaku');
+        kSelect.innerHTML = ''; 
+        mkSelect.innerHTML = '<option value="all">全會</option>';
+        for(let i in config) { 
+            let opt = `<option value="${i}">${config[i].name}</option>`;
+            kSelect.innerHTML += opt; mkSelect.innerHTML += opt;
+        }
         const grid = document.getElementById('cfg-grid'); grid.innerHTML = '';
         for(let i in config) {
-            let skIn = ''; for(let j=1; j<=config[i].skCount; j++) skIn += `<input type="text" id="cs-${i}-${j}" value="${config[i].sk[j] || j+'小角'}" style="margin-top:5px; font-size:0.8rem;">`;
+            let skIn = ''; for(let j=1; j<=config[i].skCount; j++) skIn += `<input type="text" id="cs-${i}-${j}" value="${config[i].sk[j] || j+'小角'}" style="margin-top:5px; font-size:0.8rem; padding:5px;">`;
             grid.innerHTML += `<div class="card" style="border-top:3px solid var(--secondary)">
                 <label>大角 ${i} 名稱</label><input type="text" id="cn-${i}" value="${config[i].name}">
                 <button onclick="refreshSkUI(${i})" style="margin:10px 0; font-size:10px;">🔄 更新小角清單</button>
@@ -158,43 +194,38 @@
         uiAdd(); syncFromCloud();
     }
 
-    function refreshSkUI(i) {
-        const container = document.getElementById(`sk-container-${i}`);
-        const count = 4; // 預設或從輸入框抓
-        let html = ''; for(let j=1; j<=count; j++) html += `<input type="text" id="cs-${i}-${j}" value="${j}小角" style="margin-top:5px; font-size:0.8rem;">`;
-        container.innerHTML = html;
-    }
-
-    function uiAdd() {
-        const r = document.getElementById('in-base').value;
-        document.getElementById('sk-wrap').style.display = (r==='理事'||r==='監事') ? 'none' : 'block';
-        uiSK();
-    }
-    function uiSK() {
-        const s = document.getElementById('in-skaku'); const k = document.getElementById('in-kaku').value;
-        if(!config[k]) return; s.innerHTML = ''; for(let j in config[k].sk) s.innerHTML += `<option value="${j}">${config[k].sk[j]}</option>`;
-    }
-
     function showPage(p) {
-        document.querySelectorAll('#main > div').forEach(d => d.style.display='none');
-        document.getElementById('page-'+p).style.display='block';
+        const pages = ["history", "dashboard", "members", "add", "config", "msg"];
+        pages.forEach(id => {
+            const el = document.getElementById('page-' + id);
+            if (el) el.style.display = 'none';
+        });
+        const target = document.getElementById('page-' + p);
+        if (target) target.style.display = 'block';
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         render();
     }
 
     function toggleMode() {
         isAdmin = !isAdmin; document.body.className = isAdmin ? 'admin-mode' : 'readonly-mode';
-        document.getElementById('toggle-mode').textContent = isAdmin ? '切換觀看模式' : '切換管理員模式';
+        document.getElementById('toggle-mode').textContent = isAdmin ? '切換至唯讀模式' : '切換至管理模式';
         showPage('dashboard');
     }
 
     function render() {
+        document.getElementById('leader-info').innerHTML = `理事長：${(members.find(m=>m.title==='理事長')||{}).name||'--'}<br>副理事長：${(members.find(m=>m.title==='副理事長')||{}).name||'--'}`;
         const mList = document.getElementById('member-list'); const s = document.getElementById('search-m').value.toLowerCase();
         mList.innerHTML = '';
         members.filter(m => m.name.toLowerCase().includes(s)).forEach(m => {
             const loc = m.baseRole==='理事' ? config[m.kaku].name : `${config[m.kaku].name}(${config[m.kaku].sk[m.skaku] || '小角'})`;
             mList.innerHTML += `<tr><td>${m.name}</td><td>${m.baseRole}</td><td>${m.title||'--'}</td><td>${m.phone}</td><td>${loc}</td><td class="admin-only">--</td></tr>`;
         });
+        // 儀表板各角列表
+        const kBody = document.getElementById('kaku-list'); kBody.innerHTML = '';
+        for(let i in config) {
+            const dC = members.filter(m=>m.kaku == i && m.baseRole === '理事').length;
+            kBody.innerHTML += `<tr><td>${config[i].name}</td><td>${dC}/${config[i].dQuota}</td><td>--</td><td>${dC>=config[i].dQuota?'✅':'⏳'}</td></tr>`;
+        }
     }
 
     document.getElementById('add-form').onsubmit = async function(e) {
@@ -216,6 +247,24 @@
         showPage('members');
     };
 
+    function genMsg() {
+        const r = document.getElementById('msg-role').value; const k = document.getElementById('msg-kaku').value; const b = document.getElementById('msg-body').value;
+        const targets = members.filter(m => (r==='all'||m.baseRole===r) && (k==='all'||m.kaku==k));
+        document.getElementById('payload-content').textContent = `Eastin，請幫我群發給：${targets.map(t=>t.name).join(',')} \n\n內容：${b}`;
+        document.getElementById('payload-area').style.display = 'block';
+    }
+
+    function copyMsg() { navigator.clipboard.writeText(document.getElementById('payload-content').textContent); alert('已複製'); }
+
+    function uiAdd() {
+        const r = document.getElementById('in-base').value;
+        document.getElementById('sk-wrap').style.display = (r==='理事'||r==='監事') ? 'none' : 'block';
+        uiSK();
+    }
+    function uiSK() {
+        const s = document.getElementById('in-skaku'); const k = document.getElementById('in-kaku').value;
+        if(!config[k]) return; s.innerHTML = ''; for(let j in config[k].sk) s.innerHTML += `<option value="${j}">${config[k].sk[j]}</option>`;
+    }
     function showQRCode() {
         document.getElementById('qrcode').innerHTML = '';
         new QRCode(document.getElementById('qrcode'), { text: window.location.href.split('?')[0] + "?page=add", width: 180, height: 180 });
@@ -226,4 +275,3 @@
 </script>
 </body>
 </html>
-
