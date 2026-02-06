@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>老六媽會管理系統 V17.0 - Google Sheets 雲端版</title>
+    <title>老六媽會管理系統 V17.1 - 雲端版</title>
     <style>
         :root {
             --primary: #800000; --secondary: #daa520; --light: #fdfaf5;
@@ -39,10 +39,13 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--primary); }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
 
+        #qr-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .qr-card { background: white; padding: 30px; border-radius: 15px; text-align: center; border: 5px solid var(--secondary); }
+
         #sync-status { position: fixed; bottom: 10px; right: 10px; font-size: 0.7rem; color: #999; }
 
         @media print {
-            #sidebar, header, .nav-item, .admin-only, .btn-action, #sync-status { display: none !important; }
+            #sidebar, header, .nav-item, .admin-only, .btn-action, #sync-status, #qr-overlay { display: none !important; }
             #main { padding: 0; } body { background: white; } .card { border: none; box-shadow: none; padding: 0; }
             table { border: 1px solid #000; } th, td { border: 1px solid #000; padding: 8px; color: black !important; }
         }
@@ -51,12 +54,13 @@
 <body class="admin-mode">
 
 <div id="sidebar">
-    <h2>老六媽會管理系統 V17.0</h2>
+    <h2>老六媽會管理系統 V17.1</h2>
     <div class="nav-item active" onclick="showPage('history')"><span class="nav-icon">📜</span> 會史沿革</div>
     <div class="nav-item" onclick="showPage('dashboard')"><span class="nav-icon">📊</span> 組織佈建總覽</div>
     <div class="nav-item" onclick="showPage('members')"><span class="nav-icon">👥</span> 全會名冊</div>
     <div class="nav-item admin-only" onclick="showPage('add')"><span class="nav-icon">➕</span> 成員登記授職</div>
     <div class="nav-item admin-only" onclick="showPage('config')"><span class="nav-icon">⚙️</span> 雲端架構設定</div>
+    <div class="nav-item admin-only" onclick="showQRCode()"><span class="nav-icon">📱</span> 分享登記碼</div>
     <div style="position:absolute; bottom: 20px; left: 15px; right: 15px;">
         <button id="toggle-mode" onclick="toggleMode()" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--secondary); background:none; color:var(--secondary); cursor:pointer; font-weight:bold; font-size:0.8rem;">切換觀看模式</button>
     </div>
@@ -96,7 +100,7 @@
         <div class="card"><table><thead><tr><th>姓名</th><th>身份</th><th>職務</th><th>手機</th><th>歸屬</th><th class="admin-only">管理</th></tr></thead><tbody id="member-table"></tbody></table></div>
     </div>
 
-    <!-- 成員登記授職 -->
+    <!-- 成員登記 -->
     <div id="page-add" style="display:none;">
         <header><h1>成員登記授職</h1></header>
         <div class="card" style="max-width: 500px; margin: 0 auto;">
@@ -124,10 +128,18 @@
     </div>
 </div>
 
+<div id="qr-overlay" onclick="this.style.display='none'">
+    <div class="qr-card" onclick="event.stopPropagation()">
+        <h3 style="color:var(--primary); margin-bottom:15px;">老六媽會登記碼</h3>
+        <div id="qrcode" style="margin:20px auto; display:inline-block;"></div>
+        <p style="font-size:0.8rem; color:#666;">掃描此碼可直接進入成員登記頁面</p>
+    </div>
+</div>
+
 <div id="sync-status">雲端狀態：就緒</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-    // 您的 Google Apps Script 網址
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzfLug-EeJk-lOxMtR0YwCPqO-FCppV3aqehychOjUsY4MbVzEVCIv62CPz1iFScX4/exec";
     
     let members = [];
@@ -137,36 +149,26 @@
 
     const kPresets = { 1: { sk: 2, d: 1 }, 2: { sk: 5, d: 2 }, 3: { sk: 4, d: 1 }, 4: { sk: 2, d: 1 }, 5: { sk: 3, d: 1 }, 6: { sk: 3, d: 1 }, 7: { sk: 3, d: 1 }, 8: { sk: 3, d: 1 }, 9: { sk: 2, d: 1 }, 10: { sk: 3, d: 1 }, 11: { sk: 3, d: 1 } };
 
-   async function syncFromCloud() {
+    async function syncFromCloud() {
         document.getElementById('sync-status').textContent = "雲端狀態：正在同步...";
         try {
             const res = await fetch(GAS_URL);
             const data = await res.json();
             
-            // 處理 Config (組織設定)
             if(data.config) {
-                try { config = JSON.parse(data.config); } 
-                catch(e) { console.log("Config 格式為純文字，直接載入"); }
+                try { config = JSON.parse(data.config); } catch(e) { console.log("Config 解析失敗"); }
             }
-            
-            // 處理 Members (成員名冊)
             if(data.members) {
-                try { members = JSON.parse(data.members); } 
-                catch(e) { members = []; } // 確保名冊解析失敗時為空陣列
+                try { members = JSON.parse(data.members); } catch(e) { members = []; }
             }
-            
-            // 處理 History (會史沿革) - 增加相容性檢查
             if(data.history) {
-                // 如果是 JSON 格式（開頭是引號），則解析它；否則直接當作純文字
                 if (data.history.trim().startsWith('"')) {
-                    try { historyContent = JSON.parse(data.history); } 
-                    catch(e) { historyContent = data.history; }
+                    try { historyContent = JSON.parse(data.history); } catch(e) { historyContent = data.history; }
                 } else {
                     historyContent = data.history;
                 }
             }
             
-            // 若雲端是空的，則進行初始化
             if (Object.keys(config).length === 0) {
                 for(let i=1; i<=11; i++) {
                     let skMap = {}; for(let j=1; j<=kPresets[i].sk; j++) skMap[j] = `${j}小角`;
@@ -179,7 +181,7 @@
             document.getElementById('sync-status').textContent = "雲端狀態：同步完成";
         } catch (e) {
             document.getElementById('sync-status').textContent = "雲端狀態：連線失敗";
-            console.error(e);
+            init();
         }
     }
 
@@ -276,8 +278,15 @@
             config[i].sk = newSkMap;
         }
         saveToCloud("Config", config);
-        alert('組織架構已同步至 Google Sheet！');
+        alert('組織架構已同步！');
         init();
+    }
+
+    function showQRCode() {
+        document.getElementById('qrcode').innerHTML = '';
+        const url = window.location.href.split('?')[0] + "?page=add";
+        new QRCode(document.getElementById('qrcode'), { text: url, width: 200, height: 200 });
+        document.getElementById('qr-overlay').style.display = 'flex';
     }
 
     function delM(id) { 
@@ -300,7 +309,7 @@
             skaku:document.getElementById('in-skaku').value 
         });
         saveToCloud("Members", members);
-        alert('登記成功且已同步至雲端！'); 
+        alert('登記成功且已同步！'); 
         showPage('members');
     };
 
@@ -310,8 +319,11 @@
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'inline-block' : 'none');
     }
 
-    window.onload = () => { syncFromCloud(); showPage('history'); };
+    window.onload = () => { 
+        const params = new URLSearchParams(window.location.search);
+        if(params.get('page') === 'add') showPage('add');
+        syncFromCloud(); 
+    };
 </script>
 </body>
 </html>
-
