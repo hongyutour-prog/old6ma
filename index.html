@@ -137,28 +137,49 @@
 
     const kPresets = { 1: { sk: 2, d: 1 }, 2: { sk: 5, d: 2 }, 3: { sk: 4, d: 1 }, 4: { sk: 2, d: 1 }, 5: { sk: 3, d: 1 }, 6: { sk: 3, d: 1 }, 7: { sk: 3, d: 1 }, 8: { sk: 3, d: 1 }, 9: { sk: 2, d: 1 }, 10: { sk: 3, d: 1 }, 11: { sk: 3, d: 1 } };
 
-    async function syncFromCloud() {
+   async function syncFromCloud() {
         document.getElementById('sync-status').textContent = "雲端狀態：正在同步...";
         try {
             const res = await fetch(GAS_URL);
             const data = await res.json();
-            if(data.config) config = JSON.parse(data.config);
-            if(data.members) members = JSON.parse(data.members);
-            if(data.history) historyContent = JSON.parse(data.history);
             
+            // 處理 Config (組織設定)
+            if(data.config) {
+                try { config = JSON.parse(data.config); } 
+                catch(e) { console.log("Config 格式為純文字，直接載入"); }
+            }
+            
+            // 處理 Members (成員名冊)
+            if(data.members) {
+                try { members = JSON.parse(data.members); } 
+                catch(e) { members = []; } // 確保名冊解析失敗時為空陣列
+            }
+            
+            // 處理 History (會史沿革) - 增加相容性檢查
+            if(data.history) {
+                // 如果是 JSON 格式（開頭是引號），則解析它；否則直接當作純文字
+                if (data.history.trim().startsWith('"')) {
+                    try { historyContent = JSON.parse(data.history); } 
+                    catch(e) { historyContent = data.history; }
+                } else {
+                    historyContent = data.history;
+                }
+            }
+            
+            // 若雲端是空的，則進行初始化
             if (Object.keys(config).length === 0) {
                 for(let i=1; i<=11; i++) {
                     let skMap = {}; for(let j=1; j<=kPresets[i].sk; j++) skMap[j] = `${j}小角`;
                     config[i] = { name: `第 ${i} 角`, skCount: kPresets[i].sk, dQuota: kPresets[i].d, sk: skMap };
                 }
             }
-            if(!historyContent) historyContent = "本會之創設雖缺乏完整之歷史資料考據，本文是根據歷來有關檔案資料記錄及地方耆老前輩口述，綜合記錄而形成。\n\n約於光緒 20 年間（甲午年）即西元 1894 年，由地方有志者原台中洲太平庄士紳林垂拱先生於 1911 年號召信眾，創立『南瑤宮「天上聖母老六媽會」』。目前本會組織縮減為 11 大角 42 小角，會員數約 3200 多名。";
+            if(!historyContent) historyContent = "（尚未設定會史文字）";
             
             init();
             document.getElementById('sync-status').textContent = "雲端狀態：同步完成";
         } catch (e) {
             document.getElementById('sync-status').textContent = "雲端狀態：連線失敗";
-            init(); // 即使失敗也初始化預設值
+            console.error(e);
         }
     }
 
@@ -293,3 +314,4 @@
 </script>
 </body>
 </html>
+
