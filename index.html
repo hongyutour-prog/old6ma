@@ -416,26 +416,39 @@
         uiAdd();
     }
 
-    async function saveToCloud() {
-        const payload = {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'save',
-                members: JSON.stringify(members),
-                config: JSON.stringify(config),
-                history: historyContent
-            })
-        };
+   async function saveToCloud() {
+    const status = document.getElementById('sync-status');
+    status.textContent = "⏳ 同步中...";
+    
+    // 準備要存入的資料
+    const dataToSave = {
+        action: 'save',
+        members: JSON.stringify(members),
+        config: JSON.stringify(config),
+        history: historyContent
+    };
+
+    // 優先使用 GAS 內建的 google.script.run (這是最穩定的方式)
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+            .withSuccessHandler(() => { status.textContent = "✅ 雲端已更新"; })
+            .withFailureHandler((err) => { alert("同步失敗：" + err); })
+            .processData(dataToSave); // 呼叫 GAS 後端的函式
+    } else {
+        // 如果是外部測試環境，使用 fetch (需處理 CORS)
         try {
-            await fetch(GAS_URL, payload);
-            document.getElementById('sync-status').textContent = "✅ 已同步雲端";
+            // 注意：GAS 的 POST 必須將內容轉為字串傳送
+            await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(dataToSave)
+            });
+            status.textContent = "✅ 已同步雲端";
         } catch(e) {
+            status.textContent = "❌ 同步失敗";
             console.error(e);
-            alert('同步失敗，請檢查網路連接');
         }
     }
+}
 
     async function delM(id) {
         if(!confirm('確定要刪除這位成員嗎？')) return;
@@ -486,3 +499,4 @@
 </script>
 </body>
 </html>
+
